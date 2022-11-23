@@ -27,12 +27,12 @@ ElbowPlot(pbmc)
 pbmc<-FindNeighbors(object=pbmc, dims=1:15)
 pbmc<-FindClusters(object=pbmc, resolution=0.25)
 pbmc<-RunUMAP(pbmc, reduction="pca", dims=1:15)
-DimPlot(pbmc, label=T, label.box=T, shuffle=TRUE, raster=FALSE, repel=TRUE, label.size=5)+NoAxes()
+#DimPlot(pbmc, label=T, label.box=T, shuffle=TRUE, raster=FALSE, repel=TRUE, label.size=5)+NoAxes()
 
-new.cluster.ids <- c("Naive CD4 T", "CD14+ Mono", "Memory CD4 T", "B", "CD8 T", "FCGR3A+ Mono",
+#new.cluster.ids <- c("Naive CD4 T", "CD14+ Mono", "Memory CD4 T", "B", "CD8 T", "FCGR3A+ Mono",
                      "NK", "DC", "Platelet", "RBC")
-names(new.cluster.ids) <- levels(pbmc)
-pbmc <- RenameIdents(pbmc, new.cluster.ids)
+#names(new.cluster.ids) <- levels(pbmc)
+#pbmc <- RenameIdents(pbmc, new.cluster.ids)
 jpeg('C:/Users/aishw/OneDrive/Desktop/Semester 3/BIOL 8803/Group Project/scRNA-seq Dataset/Results/scRNA-seq_Results.jpeg')
 DimPlot(pbmc, reduction = "umap", label = TRUE, pt.size = 0.5) + NoLegend()
 dev.off()

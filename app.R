@@ -8,7 +8,6 @@ library(scATAC.Explorer)
 library(scRNAseq)
 library(shinyjs)
 library(DT)
-library(rsconnect)
 
 
 atacdata_table<-as.data.frame(queryATAC(metadata_only=TRUE))
@@ -29,14 +28,15 @@ ui <- fluidPage(theme=shinytheme("yeti"),
                   sidebarPanel(
                     h3(HTML("Upload datasets"), style={'text-align: center;'}),
                     h5(HTML("Upload scATAC-Seq data"), style={'text-align: center; font-weight: bold;'}),
-                    fileInput("atacdata", "Choose scATAC-Seq fragments.tsv File", accept = ".tsv.gz"),
-                    fileInput("atacdata", "Choose scATAC-Seq H5 File", accept = ".tsv.gz"),
+                    fileInput("atacfrag", "Choose scATAC-Seq fragments.tsv File*"),
+                    fileInput("atach5", "Choose scATAC-Seq H5 File*", accept = ".tsv.gz"),
                     h5(HTML("Upload scRNA-Seq data"), style={'text-align: center; font-weight: bold;'}),
-                    fileInput("scrnadata", "Choose scRNA-Seq RDS/H5AD/Matrix File"),
+                    fileInput("scrnamatrix", "Choose scRNA-Seq RDS/H5AD/Matrix File*"),
                     fileInput("scrnadata", "Choose scRNA-Seq Features File"),
                     fileInput("scrnadata", "Choose scRNA-Seq Barcode File"),
                     actionButton('integrateupload_btn', 'Analyze and Integrate',
                                  style="color: #fff; background-color: #4CAF50; text-align: center"),
+                    h6(HTML("*=required"), style={'text-align: center;'}),
                     h4(HTML("OR"), style={'text-align: center;'}),
                     h3(HTML("Select publicly available datasets"), style={'text-align: center;'}),
                     h4(HTML("Click the buttons below to see available datasets"), style={'text-align: center;'}),
@@ -82,6 +82,23 @@ server <- function(input, output) {
     caption=htmltools::tags$caption("scRNA-Seq Datasets", style="color:black; font-size: 20px; font-weight:bold"))
   })
   
+  ##Analysis and Integration
+  observeEvent(input$integrateupload_btn, {
+    #Check if mandatory files have been uploaded
+    if(is.null(input$atacfrag) | is.null(input$atach5) | is.null(input$scrnamatrix))
+    {showModal(modalDialog(
+      title = "Missing File(s)!",
+      paste0("You have not uploaded one or more required files. Please ensure you have uploaded the mandatory input files"),
+      easyClose = TRUE,
+      footer = NULL
+    ))
+    }
+   ##ATAC Pipeline
+   ##RNA-Seq pipeline
+   ##Integration
+   
+  #Results: 3 plots and one table
+  })
   
 }
 

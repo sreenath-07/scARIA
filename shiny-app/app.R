@@ -2,20 +2,28 @@ library(BiocManager)
 options(repos = BiocManager::repositories())
 library(shiny)
 library(shinythemes)
-library(dplyr)
+library(shinyjs)
 library(shinycssloaders)
+
+library(dplyr)
 library(scATAC.Explorer)
 library(scRNAseq)
-library(shinyjs)
 library(DT)
 library(rsconnect)
 library(EnsDb.Hsapiens.v75)
+library(BSgenome.Hsapiens.UCSC.hg38)
+
+library(vctrs)
 library(Signac)
-library(SeuratData)
+# devtools::install_github('satijalab/seurat-data')
+# library(SeuratData)
 library(Seurat)
 library(ggplot2)
 library(patchwork)
-library(BSgenome.Hsapiens.UCSC.hg38)
+# install.packages("Matrix", version= "1.5-3", repos="https://Matrix.R-forge.R-project.org/")
+
+# Add matrix and vcts package installation commands with exact versions
+
 
 atacdata_table<-as.data.frame(queryATAC(metadata_only=TRUE))
 accession_atac<-as.vector(unique(atacdata_table$Accession))
@@ -69,9 +77,7 @@ ui <- fluidPage(theme=shinytheme("yeti"),
                 )
 )
 
-
-
-######Server
+###### Server
 server <- function(input, output) {
   #To upload user datasets
   options(shiny.maxRequestSize=3000*1024^2)
@@ -119,7 +125,7 @@ server <- function(input, output) {
        counts = counts,
        sep = c(":", "-"),
        genome = 'hg19',
-       fragments = "C:/Users/varsh/Desktop/GT Research/BIOL 8803/atac_v1_pbmc_10k_fragments.tsv.gz",
+       fragments = "C:\\Users\\ssrikrishnan6\\scATAC\\Signac\\vignette_disjoint\\atac_v1_pbmc_10k_fragments.tsv.gz",
        min.cells = 10,
        min.features = 200
      )
@@ -180,7 +186,16 @@ server <- function(input, output) {
        normalization.method = 'LogNormalize',
        scale.factor = median(pbmc$nCount_RNA)
      )
-    
+     
+     gene.activities <- GeneActivity(pbmc)
+     # add the gene activity matrix to the Seurat object as a new assay and normalize it
+     pbmc[['RNA']] <- CreateAssayObject(counts = gene.activities)
+     pbmc <- NormalizeData(
+       object = pbmc,
+       assay = 'RNA',
+       normalization.method = 'LogNormalize',
+       scale.factor = median(pbmc$nCount_RNA)
+     )
      
      DefaultAssay(pbmc) <- 'RNA'
      FeaturePlot(

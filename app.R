@@ -8,13 +8,20 @@ library(scATAC.Explorer)
 library(scRNAseq)
 library(shinyjs)
 library(DT)
-
+library(rsconnect)
+library(EnsDb.Hsapiens.v75)
+library(Signac)
+library(SeuratData)
+library(Seurat)
+library(ggplot2)
+library(patchwork)
+library(BSgenome.Hsapiens.UCSC.hg38)
 
 atacdata_table<-as.data.frame(queryATAC(metadata_only=TRUE))
 accession_atac<-as.vector(unique(atacdata_table$Accession))
-atacdata_table<-select(atacdata_table, Reference, Accession, Sequencing_Name, Organism, Disease, Tissue_Cell_Type, Data_Summary)
+atacdata_table<-dplyr::select(atacdata_table, Reference, Accession, Sequencing_Name, Organism, Disease, Tissue_Cell_Type, Data_Summary)
 scrna_table<-as.data.frame(listDatasets())
-scrna_table<-select(scrna_table, Reference, Taxonomy, Part)
+scrna_table<-dplyr::select(scrna_table, Reference, Taxonomy, Part)
 accession_scrna<-as.vector(unique(scrna_table$Reference))
 
 ######UI
@@ -36,7 +43,7 @@ ui <- fluidPage(theme=shinytheme("yeti"),
                     fileInput("scrnadata", "Choose scRNA-Seq Barcode File"),
                     actionButton('integrateupload_btn', 'Analyze and Integrate',
                                  style="color: #fff; background-color: #4CAF50; text-align: center"),
-                    h6(HTML("*=required"), style={'text-align: center;'}),
+                    h6(HTML("*=required"), style={'text-align: center; font-weight: bold; color: red;'}),
                     h4(HTML("OR"), style={'text-align: center;'}),
                     h3(HTML("Select publicly available datasets"), style={'text-align: center;'}),
                     h4(HTML("Click the buttons below to see available datasets"), style={'text-align: center;'}),
@@ -52,7 +59,10 @@ ui <- fluidPage(theme=shinytheme("yeti"),
                                  style="color: #fff; background-color: #4CAF50; text-align: center")
                   ),
                   mainPanel(
-                    DT::dataTableOutput("mytable")
+                    tabsetPanel(type = "tabs",
+                                tabPanel("Refined Clusters", plotOutput("refined_clust")),
+                                tabPanel("scATAC-Seq", plotOutput("atacplot")),
+                                tabPanel("scRNA-Seq", plotOutput("screeplot")))
                     #plotOutput("kmplot", width = "100%") %>% withSpinner(color="#0dc5c1")
                   )
                 )
@@ -85,6 +95,7 @@ server <- function(input, output) {
   ##Analysis and Integration
   observeEvent(input$integrateupload_btn, {
     #Check if mandatory files have been uploaded
+    
     if(is.null(input$atacfrag) | is.null(input$atach5) | is.null(input$scrnamatrix))
     {showModal(modalDialog(
       title = "Missing File(s)!",
@@ -93,14 +104,124 @@ server <- function(input, output) {
       footer = NULL
     ))
     }
+   else{ 
    ##ATAC Pipeline
-   ##RNA-Seq pipeline
+     print("hello")
+     counts <- Read10X_h5(filename = "C:/Users/varsh/Desktop/GT Research/BIOL 8803/atac_v1_pbmc_10k_filtered_peak_bc_matrix.h5")
+     metadata <- read.csv(
+       file = "C:/Users/varsh/Desktop/GT Research/BIOL 8803/atac_v1_pbmc_10k_singlecell.csv",
+       header = TRUE,
+       row.names = 1
+     )
+     
+     chrom_assay <- CreateChromatinAssay(
+       counts = counts,
+       sep = c(":", "-"),
+       genome = 'hg19',
+       fragments = 'C:/Users/varsh/Desktop/GT Research/BIOL 8803/atac_v1_pbmc_10k_fragments.tsv.gz',
+       min.cells = 10,
+       min.features = 200
+     )
+     
+     pbmc <- CreateSeuratObject(
+       counts = chrom_assay,
+       assay = "peaks",
+       meta.data = metadata
+     ) 
+     
+     
+     # extract gene annotations from EnsDb
+     annotations <- GetGRangesFromEnsDb(ensdb = EnsDb.Hsapiens.v75)
+     
+     # change to UCSC style since the data was mapped to hg19
+     seqlevelsStyle(annotations) <- 'UCSC'
+     
+     # add the gene information to the object
+     Annotation(pbmc) <- annotations
+     
+     # compute nucleosome signal score per cell
+     pbmc <- NucleosomeSignal(object = pbmc)
+     
+     # compute TSS enrichment score per cell
+     pbmc <- TSSEnrichment(object = pbmc, fast = TRUE)
+     
+     # add blacklist ratio and fraction of reads in peaks
+     pbmc$pct_reads_in_peaks <- pbmc$peak_region_fragments / pbmc$passed_filters * 100
+     pbmc$blacklist_ratio <- pbmc$blacklist_region_fragments / pbmc$peak_region_fragments
+     
+     #Remove cells that are outliers for these QC metrics
+     pbmc <- subset(
+       x = pbmc,
+       subset = peak_region_fragments > 3000 &
+         peak_region_fragments < 20000 &
+         pct_reads_in_peaks > 15 &
+         blacklist_ratio < 0.05 &
+         nucleosome_signal < 4 &
+         TSS.enrichment > 2
+     )
+     
+     #Normalization and linear dimensional reduction
+     pbmc <- RunTFIDF(pbmc)
+     pbmc <- FindTopFeatures(pbmc, min.cutoff = 'q0')
+     pbmc <- RunSVD(pbmc)
+     
+     #Nonlinear dimenison reduction and clustering
+     pbmc <- RunUMAP(object = pbmc, reduction = 'lsi', dims = 2:30)
+     pbmc <- FindNeighbors(object = pbmc, reduction = 'lsi', dims = 2:30)
+     pbmc <- FindClusters(object = pbmc, verbose = FALSE, algorithm = 3)
+     
+     gene.activities <- GeneActivity(pbmc)
+     # add the gene activity matrix to the Seurat object as a new assay and normalize it
+     pbmc[['RNA']] <- CreateAssayObject(counts = gene.activities)
+     pbmc <- NormalizeData(
+       object = pbmc,
+       assay = 'RNA',
+       normalization.method = 'LogNormalize',
+       scale.factor = median(pbmc$nCount_RNA)
+     )
+     
+     gene.activities <- GeneActivity(pbmc)
+     # add the gene activity matrix to the Seurat object as a new assay and normalize it
+     pbmc[['RNA']] <- CreateAssayObject(counts = gene.activities)
+     pbmc <- NormalizeData(
+       object = pbmc,
+       assay = 'RNA',
+       normalization.method = 'LogNormalize',
+       scale.factor = median(pbmc$nCount_RNA)
+     )
+     
+     DefaultAssay(pbmc) <- 'RNA'
+     FeaturePlot(
+       object = pbmc,
+       features = c('MS4A1', 'CD3D', 'LEF1', 'NKG7', 'TREM1', 'LYZ'),
+       pt.size = 0.1,
+       max.cutoff = 'q95',
+       ncol = 3
+     )
+     
+     
+    ##RNA-Seq
+     pbmc_rna <- readRDS("C:/Users/varsh/Desktop/GT Research/BIOL 8803/pbmc_10k_v3.rds")
+     
+     transfer.anchors <- FindTransferAnchors(
+       reference = pbmc_rna,
+       query = pbmc,
+       reduction = 'cca'
+     )
+    #DimPlot(object = pbmc, label = TRUE) + NoLegend()
+    
+   
    ##Integration
    
-  #Results: 3 plots and one table
+   }
   })
-  
+  ####Results: 3 plots and one table
+  output$atacplot<-renderPlot({
+  DimPlot(object = pbmc, label = TRUE) + NoLegend()
+  })
 }
 
 # Run the application 
 shinyApp(ui = ui, server = server)
+
+

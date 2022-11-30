@@ -180,16 +180,7 @@ server <- function(input, output) {
        normalization.method = 'LogNormalize',
        scale.factor = median(pbmc$nCount_RNA)
      )
-     
-     gene.activities <- GeneActivity(pbmc)
-     # add the gene activity matrix to the Seurat object as a new assay and normalize it
-     pbmc[['RNA']] <- CreateAssayObject(counts = gene.activities)
-     pbmc <- NormalizeData(
-       object = pbmc,
-       assay = 'RNA',
-       normalization.method = 'LogNormalize',
-       scale.factor = median(pbmc$nCount_RNA)
-     )
+    
      
      DefaultAssay(pbmc) <- 'RNA'
      FeaturePlot(

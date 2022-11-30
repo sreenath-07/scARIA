@@ -61,9 +61,9 @@ ui <- fluidPage(theme=shinytheme("yeti"),
                   ),
                   mainPanel(
                     tabsetPanel(type = "tabs",
-                                tabPanel("Refined Clusters", plotOutput("refined_clust")),
-                                tabPanel("scATAC-Seq", plotOutput("atacplot")),
-                                tabPanel("scRNA-Seq", plotOutput("screeplot")))
+                                tabPanel("Refined Clusters", plotOutput("refined_clust") %>% withSpinner(color="#0dc5c1")),
+                                tabPanel("scATAC-Seq", plotOutput("atacplot") %>% withSpinner(color="#0dc5c1")),
+                                tabPanel("scRNA-Seq", plotOutput("scrnaplot") %>% withSpinner(color="#0dc5c1")))
                     #plotOutput("kmplot", width = "100%") %>% withSpinner(color="#0dc5c1")
                   )
                 )
@@ -105,112 +105,146 @@ server <- function(input, output) {
       footer = NULL
     ))
     }
-   else{ 
-   ##ATAC Pipeline
-     print("hello")
-     counts <- Read10X_h5(filename = input$atach5$datapath)
-     metadata <- read.csv(
-       file = input$atacmeta$datapath,
-       header = TRUE,
-       row.names = 1
-     )
-     
-     chrom_assay <- CreateChromatinAssay(
-       counts = counts,
-       sep = c(":", "-"),
-       genome = 'hg19',
-       fragments = "C:/Users/varsh/Desktop/GT Research/BIOL 8803/atac_v1_pbmc_10k_fragments.tsv.gz",
-       min.cells = 10,
-       min.features = 200
-     )
-     
-     pbmc <- CreateSeuratObject(
-       counts = chrom_assay,
-       assay = "peaks",
-       meta.data = metadata
-     ) 
-     
-     
-     # extract gene annotations from EnsDb
-     annotations <- GetGRangesFromEnsDb(ensdb = EnsDb.Hsapiens.v75)
-     
-     # change to UCSC style since the data was mapped to hg19
-     seqlevelsStyle(annotations) <- 'UCSC'
-     
-     # add the gene information to the object
-     Annotation(pbmc) <- annotations
-     
-     # compute nucleosome signal score per cell
-     pbmc <- NucleosomeSignal(object = pbmc)
-     
-     # compute TSS enrichment score per cell
-     pbmc <- TSSEnrichment(object = pbmc, fast = TRUE)
-     
-     # add blacklist ratio and fraction of reads in peaks
-     pbmc$pct_reads_in_peaks <- pbmc$peak_region_fragments / pbmc$passed_filters * 100
-     pbmc$blacklist_ratio <- pbmc$blacklist_region_fragments / pbmc$peak_region_fragments
-     
-     #Remove cells that are outliers for these QC metrics
-     pbmc <- subset(
-       x = pbmc,
-       subset = peak_region_fragments > 3000 &
-         peak_region_fragments < 20000 &
-         pct_reads_in_peaks > 15 &
-         blacklist_ratio < 0.05 &
-         nucleosome_signal < 4 &
-         TSS.enrichment > 2
-     )
-     
-     #Normalization and linear dimensional reduction
-     pbmc <- RunTFIDF(pbmc)
-     pbmc <- FindTopFeatures(pbmc, min.cutoff = 'q0')
-     pbmc <- RunSVD(pbmc)
-     
-     #Nonlinear dimenison reduction and clustering
-     pbmc <- RunUMAP(object = pbmc, reduction = 'lsi', dims = 2:30)
-     pbmc <- FindNeighbors(object = pbmc, reduction = 'lsi', dims = 2:30)
-     pbmc <- FindClusters(object = pbmc, verbose = FALSE, algorithm = 3)
-     
-     gene.activities <- GeneActivity(pbmc)
-     # add the gene activity matrix to the Seurat object as a new assay and normalize it
-     pbmc[['RNA']] <- CreateAssayObject(counts = gene.activities)
-     pbmc <- NormalizeData(
-       object = pbmc,
-       assay = 'RNA',
-       normalization.method = 'LogNormalize',
-       scale.factor = median(pbmc$nCount_RNA)
-     )
-    
-     
-     DefaultAssay(pbmc) <- 'RNA'
-     FeaturePlot(
-       object = pbmc,
-       features = c('MS4A1', 'CD3D', 'LEF1', 'NKG7', 'TREM1', 'LYZ'),
-       pt.size = 0.1,
-       max.cutoff = 'q95',
-       ncol = 3
-     )
-     
-     
-    ##RNA-Seq
-     pbmc_rna <- readRDS(input$scrnamatrix$datapath)
-     
-     transfer.anchors <- FindTransferAnchors(
-       reference = pbmc_rna,
-       query = pbmc,
-       reduction = 'cca'
-     )
-    #DimPlot(object = pbmc, label = TRUE) + NoLegend()
-    
-   
-   ##Integration
-   
-   }
+    else{ 
+      ##ATAC Pipeline
+      print("hello")
+      counts <- Read10X_h5(filename = input$atach5$datapath)
+      metadata <- read.csv(
+        file = input$atacmeta$datapath,
+        header = TRUE,
+        row.names = 1
+      )
+      
+      chrom_assay <- CreateChromatinAssay(
+        counts = counts,
+        sep = c(":", "-"),
+        genome = 'hg19',
+        fragments = "C:/Users/varsh/Desktop/GT Research/BIOL 8803/atac_v1_pbmc_10k_fragments.tsv.gz",
+        min.cells = 10,
+        min.features = 200
+      )
+      
+      pbmc <- CreateSeuratObject(
+        counts = chrom_assay,
+        assay = "peaks",
+        meta.data = metadata
+      ) 
+      
+      
+      # extract gene annotations from EnsDb
+      annotations <- GetGRangesFromEnsDb(ensdb = EnsDb.Hsapiens.v75)
+      
+      # change to UCSC style since the data was mapped to hg19
+      seqlevelsStyle(annotations) <- 'UCSC'
+      
+      # add the gene information to the object
+      Annotation(pbmc) <- annotations
+      
+      # compute nucleosome signal score per cell
+      pbmc <- NucleosomeSignal(object = pbmc)
+      
+      # compute TSS enrichment score per cell
+      pbmc <- TSSEnrichment(object = pbmc, fast = TRUE)
+      
+      # add blacklist ratio and fraction of reads in peaks
+      pbmc$pct_reads_in_peaks <- pbmc$peak_region_fragments / pbmc$passed_filters * 100
+      pbmc$blacklist_ratio <- pbmc$blacklist_region_fragments / pbmc$peak_region_fragments
+      
+      #Remove cells that are outliers for these QC metrics
+      pbmc <- subset(
+        x = pbmc,
+        subset = peak_region_fragments > 3000 &
+          peak_region_fragments < 20000 &
+          pct_reads_in_peaks > 15 &
+          blacklist_ratio < 0.05 &
+          nucleosome_signal < 4 &
+          TSS.enrichment > 2
+      )
+      
+      #Normalization and linear dimensional reduction
+      pbmc <- RunTFIDF(pbmc)
+      pbmc <- FindTopFeatures(pbmc, min.cutoff = 'q0')
+      pbmc <- RunSVD(pbmc)
+      
+      #Nonlinear dimenison reduction and clustering
+      pbmc <- RunUMAP(object = pbmc, reduction = 'lsi', dims = 2:30)
+      pbmc <- FindNeighbors(object = pbmc, reduction = 'lsi', dims = 2:30)
+      pbmc <- FindClusters(object = pbmc, verbose = FALSE, algorithm = 3)
+      output$atacplot<-renderPlot({
+        DimPlot(object = pbmc, label = TRUE) + NoLegend()
+      })
+      
+      gene.activities <- GeneActivity(pbmc)
+      # add the gene activity matrix to the Seurat object as a new assay and normalize it
+      pbmc[['RNA']] <- CreateAssayObject(counts = gene.activities)
+      pbmc <- NormalizeData(
+        object = pbmc,
+        assay = 'RNA',
+        normalization.method = 'LogNormalize',
+        scale.factor = median(pbmc$nCount_RNA)
+      )
+      
+      
+      DefaultAssay(pbmc) <- 'RNA'
+      FeaturePlot(
+        object = pbmc,
+        features = c('MS4A1', 'CD3D', 'LEF1', 'NKG7', 'TREM1', 'LYZ'),
+        pt.size = 0.1,
+        max.cutoff = 'q95',
+        ncol = 3
+      )
+      
+      
+      ##RNA-Seq
+      pbmc_rna <- readRDS(input$scrnamatrix$datapath)
+      
+      transfer.anchors <- FindTransferAnchors(
+        reference = pbmc_rna,
+        query = pbmc,
+        reduction = 'cca'
+      )
+      #DimPlot(object = pbmc, label = TRUE) + NoLegend()
+      predicted.labels <- TransferData(
+        anchorset = transfer.anchors,
+        refdata = pbmc_rna$celltype,
+        weight.reduction = pbmc[['lsi']],
+        dims = 2:30
+      )
+      
+      
+      pbmc <- subset(pbmc, idents = 14, invert = TRUE)
+      pbmc <- RenameIdents(
+        object = pbmc,
+        '0' = 'CD14 Mono',
+        '1' = 'CD4 Memory',
+        '2' = 'CD8 Effector',
+        '3' = 'CD4 Naive',
+        '4' = 'CD14 Mono',
+        '5' = 'DN T',
+        '6' = 'CD8 Naive',
+        '7' = 'NK CD56Dim',
+        '8' = 'pre-B',
+        '9' = 'CD16 Mono',
+        '10' = 'pro-B',
+        '11' = 'DC',
+        '12' = 'NK CD56bright',
+        
+        '13' = 'pDC'
+      )
+      
+      ##Integration
+      output$refined_clust<-renderPlot({
+        DimPlot(object = pbmc, label = TRUE) + NoLegend()
+      })
+      output$scrnaplot<-renderPlot({
+        DimPlot(object = pbmc_rna, label = TRUE) + NoLegend()
+      }) 
+    }
   })
   ####Results: 3 plots and one table
-  output$atacplot<-renderPlot({
-  DimPlot(object = pbmc, label = TRUE) + NoLegend()
-  })
+  
+  
+ 
 }
 
 # Run the application 

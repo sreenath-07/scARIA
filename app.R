@@ -36,11 +36,12 @@ ui <- fluidPage(theme=shinytheme("yeti"),
                     h3(HTML("Upload datasets"), style={'text-align: center;'}),
                     h5(HTML("Upload scATAC-Seq data"), style={'text-align: center; font-weight: bold;'}),
                     fileInput("atacfrag", "Choose scATAC-Seq fragments.tsv File*"),
-                    fileInput("atach5", "Choose scATAC-Seq H5 File*", accept = ".tsv.gz"),
+                    fileInput("atach5", "Choose scATAC-Seq H5 File*"),
+                    fileInput("atacmeta", "Choose scATAC-Seq Metadata File*"),
                     h5(HTML("Upload scRNA-Seq data"), style={'text-align: center; font-weight: bold;'}),
                     fileInput("scrnamatrix", "Choose scRNA-Seq RDS/H5AD/Matrix File*"),
-                    fileInput("scrnadata", "Choose scRNA-Seq Features File"),
-                    fileInput("scrnadata", "Choose scRNA-Seq Barcode File"),
+                    fileInput("scrnafeatures", "Choose scRNA-Seq Features File"),
+                    fileInput("scrnabarcode", "Choose scRNA-Seq Barcode File"),
                     actionButton('integrateupload_btn', 'Analyze and Integrate',
                                  style="color: #fff; background-color: #4CAF50; text-align: center"),
                     h6(HTML("*=required"), style={'text-align: center; font-weight: bold; color: red;'}),
@@ -73,7 +74,7 @@ ui <- fluidPage(theme=shinytheme("yeti"),
 ######Server
 server <- function(input, output) {
   #To upload user datasets
-  
+  options(shiny.maxRequestSize=3000*1024^2)
   
   #To show public scATAC-Seq datasets
   observeEvent(input$atac_public, {
@@ -107,9 +108,9 @@ server <- function(input, output) {
    else{ 
    ##ATAC Pipeline
      print("hello")
-     counts <- Read10X_h5(filename = "C:/Users/varsh/Desktop/GT Research/BIOL 8803/atac_v1_pbmc_10k_filtered_peak_bc_matrix.h5")
+     counts <- Read10X_h5(filename = input$atach5$datapath)
      metadata <- read.csv(
-       file = "C:/Users/varsh/Desktop/GT Research/BIOL 8803/atac_v1_pbmc_10k_singlecell.csv",
+       file = input$atacmeta$datapath,
        header = TRUE,
        row.names = 1
      )
@@ -118,7 +119,7 @@ server <- function(input, output) {
        counts = counts,
        sep = c(":", "-"),
        genome = 'hg19',
-       fragments = 'C:/Users/varsh/Desktop/GT Research/BIOL 8803/atac_v1_pbmc_10k_fragments.tsv.gz',
+       fragments = "C:/Users/varsh/Desktop/GT Research/BIOL 8803/atac_v1_pbmc_10k_fragments.tsv.gz",
        min.cells = 10,
        min.features = 200
      )
@@ -201,7 +202,7 @@ server <- function(input, output) {
      
      
     ##RNA-Seq
-     pbmc_rna <- readRDS("C:/Users/varsh/Desktop/GT Research/BIOL 8803/pbmc_10k_v3.rds")
+     pbmc_rna <- readRDS(input$scrnamatrix$datapath)
      
      transfer.anchors <- FindTransferAnchors(
        reference = pbmc_rna,
@@ -223,5 +224,3 @@ server <- function(input, output) {
 
 # Run the application 
 shinyApp(ui = ui, server = server)
-
-

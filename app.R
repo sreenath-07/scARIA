@@ -26,51 +26,48 @@ accession_scrna<-as.vector(unique(scrna_table$Reference))
 
 ######UI
 ui <- fluidPage(theme=shinytheme("yeti"),
-                titlePanel(
-                  h1(HTML("scATAC-Seq and scRNA-Seq App"),
-                     style={'background-color:#158FAD; padding:20px;align: top;'}
-                  )),
-                h4("You can upload your own data or analyze publcily available data"),
-                sidebarLayout (
-                  sidebarPanel(
-                    h3(HTML("Upload datasets"), style={'text-align: center;'}),
-                    h5(HTML("Upload scATAC-Seq data"), style={'text-align: center; font-weight: bold;'}),
-                    fileInput("atacfrag", "Choose scATAC-Seq fragments.tsv File*"),
-                    fileInput("atach5", "Choose scATAC-Seq H5 File*"),
-                    fileInput("atacmeta", "Choose scATAC-Seq Metadata File*"),
-                    h5(HTML("Upload scRNA-Seq data"), style={'text-align: center; font-weight: bold;'}),
-                    fileInput("scrnamatrix", "Choose scRNA-Seq RDS/H5AD/Matrix File*"),
-                    fileInput("scrnafeatures", "Choose scRNA-Seq Features File"),
-                    fileInput("scrnabarcode", "Choose scRNA-Seq Barcode File"),
-                    actionButton('integrateupload_btn', 'Analyze and Integrate',
-                                 style="color: #fff; background-color: #4CAF50; text-align: center"),
-                    h6(HTML("*=required"), style={'text-align: center; font-weight: bold; color: red;'}),
-                    h4(HTML("OR"), style={'text-align: center;'}),
-                    h3(HTML("Select publicly available datasets"), style={'text-align: center;'}),
-                    h4(HTML("Click the buttons below to see available datasets"), style={'text-align: center;'}),
-                    actionButton('atac_public', 'Show scATAC-Seq Datasets',
-                                 style="text-align: center"),
-                    actionButton('scrna_public', 'Show scRNA-Seq Datasets',
-                                 style="text-align: center"),
-                    selectInput("atac_public_data", "Choose the scATAC-Seq dataset of interest",
-                                choices=accession_atac),
-                    selectInput("scrna_public_data", "Choose the scRNA-Seq dataset of interest",
-                                choices=accession_scrna),
-                    actionButton('integratepublic_btn', 'Analyze and Integrate',
-                                 style="color: #fff; background-color: #4CAF50; text-align: center")
-                  ),
-                  mainPanel(
-                    tabsetPanel(type = "tabs",
-                                tabPanel("Refined Clusters", plotOutput("refined_clust") %>% withSpinner(color="#0dc5c1")),
-                                tabPanel("scATAC-Seq", plotOutput("atacplot") %>% withSpinner(color="#0dc5c1")),
-                                tabPanel("scRNA-Seq", plotOutput("scrnaplot") %>% withSpinner(color="#0dc5c1")),
-                                tabPanel("Peak to Gene linkages", plotOutput("peakgenelinks") %>% withSpinner(color="#0dc5c1")))
-                                
-                    #plotOutput("kmplot", width = "100%") %>% withSpinner(color="#0dc5c1")
-                  )
-                )
+                navbarPage("scARIA: scATAC-Seq and scRNA-Seq Integration App", 
+                           tabPanel("Analysis",
+                                    sidebarLayout (
+                                      sidebarPanel(
+                                        h3(HTML("Upload datasets"), style={'text-align: center;'}),
+                                        h5(HTML("Upload scATAC-Seq data"), style={'text-align: center; font-weight: bold;'}),
+                                        fileInput("atacfrag", "Choose scATAC-Seq fragments.tsv File*"),
+                                        fileInput("atach5", "Choose scATAC-Seq H5 File*"),
+                                        fileInput("atacmeta", "Choose scATAC-Seq Metadata File*"),
+                                        h5(HTML("Upload scRNA-Seq data"), style={'text-align: center; font-weight: bold;'}),
+                                        fileInput("scrnamatrix", "Choose scRNA-Seq RDS/H5AD/Matrix File*"),
+                                        fileInput("scrnafeatures", "Choose scRNA-Seq Features File"),
+                                        fileInput("scrnabarcode", "Choose scRNA-Seq Barcode File"),
+                                        actionButton('integrateupload_btn', 'Analyze and Integrate',
+                                                     style="color: #fff; background-color: #4CAF50; text-align: center"),
+                                        h6(HTML("*=required"), style={'text-align: center; font-weight: bold; color: red;'}),
+                                        h4(HTML("OR"), style={'text-align: center;'}),
+                                        h3(HTML("Select publicly available datasets"), style={'text-align: center;'}),
+                                        h4(HTML("Click the buttons below to see available datasets"), style={'text-align: center;'}),
+                                        actionButton('atac_public', 'Show scATAC-Seq Datasets',
+                                                     style="text-align: center"),
+                                        actionButton('scrna_public', 'Show scRNA-Seq Datasets',
+                                                     style="text-align: center"),
+                                        selectInput("atac_public_data", "Choose the scATAC-Seq dataset of interest",
+                                                    choices=accession_atac),
+                                        selectInput("scrna_public_data", "Choose the scRNA-Seq dataset of interest",
+                                                    choices=accession_scrna),
+                                        actionButton('integratepublic_btn', 'Analyze and Integrate',
+                                                     style="color: #fff; background-color: #4CAF50; text-align: center")
+                                      ),
+                                    tabsetPanel(
+                                      tabPanel("Refined Clusters", plotOutput("refined_clust") %>% withSpinner(color="#0dc5c1")),
+                                      tabPanel("scATAC-Seq", plotOutput("atacplot") %>% withSpinner(color="#0dc5c1")),
+                                      tabPanel("scRNA-Seq", plotOutput("scrnaplot") %>% withSpinner(color="#0dc5c1")),
+                                      tabPanel("Peak to Gene linkages", plotOutput("peakgenelinks") %>% withSpinner(color="#0dc5c1"))
+                                    ))),
+                           tabPanel("About", span(textOutput("summary"), style="font-size: 25px;")),
+                           tabPanel("GitHub")
+                
+                
 )
-
+)
 
 
 ######Server
@@ -94,6 +91,12 @@ server <- function(input, output) {
     }, options = list(scrollX = TRUE, scrollY = TRUE),
     caption=htmltools::tags$caption("scRNA-Seq Datasets", style="color:black; font-size: 20px; font-weight:bold"))
   })
+  
+  ##How to Use
+  output$summary<-renderText("scARIA is a Shiny app to faciliate integration of scATAC-seq and scRNA-seq data from the same biological system. To use scARIA, please upload the following: 
+1. A fragments.tsv, H5 file and a metadata file of scATAC-seq data
+2. An RDS file of scRNA-Seq data
+Click on the 'Analyze and Integrate' button to begin the integration. The refined clusters and peak to gene linkages plots for the uploaded datasets will be displayed on the same page.")
   
   ##Analysis and Integration
   observeEvent(input$integrateupload_btn, {

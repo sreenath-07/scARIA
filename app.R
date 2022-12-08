@@ -35,6 +35,7 @@ ui <- fluidPage(theme=shinytheme("yeti"),
                                         fileInput("atacfrag", "Choose scATAC-Seq fragments.tsv File*"),
                                         fileInput("atach5", "Choose scATAC-Seq H5 File*"),
                                         fileInput("atacmeta", "Choose scATAC-Seq Metadata File*"),
+                                        fileInput("atacindex", "Choose scATAC-Seq Fragments Index File*"),
                                         h5(HTML("Upload scRNA-Seq data"), style={'text-align: center; font-weight: bold;'}),
                                         fileInput("scrnamatrix", "Choose scRNA-Seq RDS/H5AD/Matrix File*"),
                                         fileInput("scrnafeatures", "Choose scRNA-Seq Features File"),
@@ -62,8 +63,8 @@ ui <- fluidPage(theme=shinytheme("yeti"),
                                       tabPanel("scRNA-Seq", plotOutput("scrnaplot") %>% withSpinner(color="#0dc5c1")),
                                       tabPanel("Peak to Gene linkages", plotOutput("peakgenelinks") %>% withSpinner(color="#0dc5c1"))
                                     ))),
-                           tabPanel("About", span(textOutput("summary"), style="font-size: 25px;")),
-                           tabPanel("GitHub")
+                           tabPanel("About", span(htmlOutput("about"), style="font-size: 25px;")),
+                           tabPanel("GitHub", span(htmlOutput("github"), style="font-size: 25px;"))
                 
                 
 )
@@ -92,11 +93,22 @@ server <- function(input, output) {
     caption=htmltools::tags$caption("scRNA-Seq Datasets", style="color:black; font-size: 20px; font-weight:bold"))
   })
   
-  ##How to Use
-  output$summary<-renderText("scARIA is a Shiny app to faciliate integration of scATAC-seq and scRNA-seq data from the same biological system. To use scARIA, please upload the following: 
-1. A fragments.tsv, H5 file and a metadata file of scATAC-seq data
-2. An RDS file of scRNA-Seq data
-Click on the 'Analyze and Integrate' button to begin the integration. The refined clusters and peak to gene linkages plots for the uploaded datasets will be displayed on the same page.")
+  ##About Section
+  output$about<- renderUI({
+    HTML(paste("scARIA is a Shiny app to faciliate integration of scATAC-seq and 
+  scRNA-seq data from the same biological system. To use scARIA, please upload the following:",
+               "1. A fragments.tsv, H5 file and a metadata file of scATAC-seq data",
+               "2. An RDS file of scRNA-Seq data",
+               "Click on the 'Analyze and Integrate' button to begin the integration. 
+  The refined clusters and peak to gene linkages
+  plots for the uploaded datasets will be displayed on the same page.",
+               "The analysis pipeline is based on the packages Signac and Seurat.", sep="<br/>"))
+  })
+  
+  ##GitHub
+  output$github<- renderUI({
+    tags$a(href="https://github.gatech.edu/BIOL8803-2022/team4", "https://github.gatech.edu/BIOL8803-2022/team4")
+  })
   
   ##Analysis and Integration
   observeEvent(input$integrateupload_btn, {
@@ -113,6 +125,7 @@ Click on the 'Analyze and Integrate' button to begin the integration. The refine
     else{ 
       ##ATAC Pipeline
       print("hello")
+      
       counts <- Read10X_h5(filename = input$atach5$datapath)
       metadata <- read.csv(
         file = input$atacmeta$datapath,
@@ -236,6 +249,7 @@ Click on the 'Analyze and Integrate' button to begin the integration. The refine
         
         '13' = 'pDC'
       )
+      pbmc <- AddMetaData(object = pbmc, metadata = predicted.labels)
       
       ##Integration
       output$refined_clust<-renderPlot({

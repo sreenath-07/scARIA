@@ -318,6 +318,10 @@ pbmc <- RenameIdents(
   '13' = 'pDC'
 )
 ```
+```{r}
+pbmc <- readRDS("C:\\Users\\ssrikrishnan6\\scATAC\\scARIA\\pbmc_atac_integrated.rds")
+```
+
 
 ## Find differentially accessible peaks between clusters
 
@@ -330,7 +334,7 @@ cells can be compared using these methods.
 
 ```{r message=TRUE, warning=FALSE}
 # change back to working with peaks instead of gene activities
-DefaultAssay(pbmc) <- 'peaks'
+# DefaultAssay(pbmc) <- 'peaks'
 
 da_peaks <- FindMarkers(
   object = pbmc,
@@ -415,11 +419,24 @@ levels(pbmc) <- c("CD4 Naive","CD4 Memory","CD8 Naive","CD8 Effector","DN T","NK
 
 CoveragePlot(
   object = pbmc,
+  region = rownames(fc)[1],
+  extend.upstream = 40000,
+  extend.downstream = 20000
+)
+```
+```{r}
+# set plotting order
+levels(pbmc) <- c("CD4 Naive","CD4 Memory","CD8 Naive","CD8 Effector","DN T","NK CD56bright","NK CD56Dim","pre-B",'pro-B',"pDC","DC","CD14 Mono",'CD16 Mono')
+
+CoveragePlot(
+  object = pbmc,
   region = rownames(da_peaks)[1],
   extend.upstream = 40000,
   extend.downstream = 20000
 )
 ```
+```
+
 ```{r}
 saveRDS(object, file = "integrated.rds")
 ```

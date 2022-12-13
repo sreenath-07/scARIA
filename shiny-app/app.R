@@ -32,8 +32,8 @@ ui <- fluidPage(theme=shinytheme("yeti"),
                                         fileInput("atacindex", "Choose scATAC-Seq Fragments Index File*"),
                                         h5(HTML("Upload scRNA-Seq data"), style={'text-align: center; font-weight: bold;'}),
                                         fileInput("scrnamatrix", "Choose scRNA-Seq RDS/H5AD/Matrix File*"),
-                                        fileInput("scrnafeatures", "Choose scRNA-Seq Features File"),
-                                        fileInput("scrnabarcode", "Choose scRNA-Seq Barcode File"),
+                                        selectInput("genome_ver", "Choose the reference genome version:",
+                                                    list("hg19" = "hg19", "hg38"="hg38")
                                         actionButton('integrateupload_btn', 'Analyze and Integrate',
                                                      style="color: #fff; background-color: #4CAF50; text-align: center"),
                                         h6(HTML("*=required"), style={'text-align: center; font-weight: bold; color: red;'}),
@@ -108,7 +108,7 @@ server <- function(input, output) {
       chrom_assay <- CreateChromatinAssay(
         counts = counts,
         sep = c(":", "-"),
-        genome = 'hg19',
+        genome = input$genome_ver,
         fragments = paste0(tempfragpath, "/fragments.tsv.gz"),
         min.cells = 10,
         min.features = 200

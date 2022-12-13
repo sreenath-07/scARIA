@@ -126,8 +126,8 @@ server <- function(input, output) {
     }
     else{ 
       ##ATAC Pipeline
-      print("hello")
-      tempfragpath<-"C:/Users/ssrikrishnan6/scATAC/scARIA/tmp"
+      print("Welcome to scARIA")
+      tempfragpath<-"/projects/team4/data"
       file.copy(input$atacfrag$datapath, paste0(tempfragpath, "/fragments.tsv.gz"), overwrite = TRUE)
       file.copy(input$atacindex$datapath, paste0(tempfragpath, "/fragments.tsv.gz.tbi"),overwrite = TRUE)
       counts <- Read10X_h5(filename = input$atach5$datapath)

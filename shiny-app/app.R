@@ -16,7 +16,7 @@ library(Seurat)
 library(ggplot2)
 library(patchwork)
 library(BSgenome.Hsapiens.UCSC.hg38)
-
+library(mailr)
 
 ######UI
 ui <- fluidPage(theme=shinytheme("yeti"),
@@ -35,6 +35,7 @@ ui <- fluidPage(theme=shinytheme("yeti"),
                                         selectInput("genome_ver", "Choose the reference genome version:",
                                                     list("hg19" = "hg19", "hg38"="hg38")
                                         ),
+                                        textInput("useremail", "Input email address")
                                         actionButton('integrateupload_btn', 'Analyze and Integrate',
                                                      style="color: #fff; background-color: #4CAF50; text-align: center"),
                                         h6(HTML("*=required"), style={'text-align: center; font-weight: bold; color: red;'}),
@@ -44,7 +45,7 @@ ui <- fluidPage(theme=shinytheme("yeti"),
                                       tabPanel("scRNA-Seq", plotOutput("scrnaplot")),
                                       tabPanel("Refined Clusters", plotOutput("refined_clust")),
                                       tabPanel("Peak to Gene linkages", plotOutput("peakgenelinks")),
-                                      uiOutput("downloadrds", style = 'padding: 20px')
+                                      downloadLink("downloadrds", "Download Integrated RDS object")
                                     ))),
                            tabPanel("About", span(htmlOutput("about"), style="font-size: 25px;")),
                            tabPanel("GitHub", span(htmlOutput("github"), style="font-size: 25px;"))
@@ -253,19 +254,22 @@ server <- function(input, output) {
         )
       })
       
-      output$downloadrds<-renderUI({
-      if(!is.null(predicted.labels))
-      {
-        downloadButton('downloadrdsfile', 'Download Results')
-      }
-    })
       
-    output$downloadrdsfile <- downloadHandler(
+    output$downloadrds <- downloadHandler(
         filename = "scARIA_Integrated_scATAC.rds",
         content = function(file) {
         saveRDS(object = pbmc, file = "pbmc_atac_integrated.rds")
         }
       )
+    send.mail(from = "scaria8803@gmail.com",
+          to = input$useremail,
+          subject = "Your scATAC and scRNA-seq integration results",
+          body = paste("Please access the integrated RDS object in the attachment."),
+          smtp = list(host.name = "smtp.gmail.com", port = 465, user.name = "scaria8803", passwd = "scaria8803!", ssl = TRUE),
+          authenticate = TRUE,
+          send = TRUE,
+          attach.files = #AttachmentPath,
+          file.names = "scARIA_Integrated_RDS.rds")
     }
   })
 

@@ -34,10 +34,10 @@ ui <- fluidPage(theme=shinytheme("yeti"),
                                         fileInput("scrnamatrix", "Choose scRNA-Seq RDS/H5AD/Matrix File*"),
                                         selectInput("genome_ver", "Choose the reference genome version:",
                                                     list("hg19" = "hg19", "hg38"="hg38")
+                                        ),
                                         actionButton('integrateupload_btn', 'Analyze and Integrate',
                                                      style="color: #fff; background-color: #4CAF50; text-align: center"),
                                         h6(HTML("*=required"), style={'text-align: center; font-weight: bold; color: red;'}),
-
                                       ),
                                     tabsetPanel(
                                       tabPanel("scATAC-Seq", plotOutput("atacplot")),
@@ -48,9 +48,9 @@ ui <- fluidPage(theme=shinytheme("yeti"),
                                     ))),
                            tabPanel("About", span(htmlOutput("about"), style="font-size: 25px;")),
                            tabPanel("GitHub", span(htmlOutput("github"), style="font-size: 25px;"))
-                           
-                           
-                )
+                
+                
+)
 )
 
 

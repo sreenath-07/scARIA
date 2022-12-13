@@ -39,12 +39,12 @@ ui <- fluidPage(theme=shinytheme("yeti"),
                                         h6(HTML("*=required"), style={'text-align: center; font-weight: bold; color: red;'}),
 
                                       ),
-                                      tabsetPanel(
-                                        tabPanel("Refined Clusters", plotOutput("refined_clust") %>% withSpinner(color="#0dc5c1")),
-                                        tabPanel("scATAC-Seq", plotOutput("atacplot") %>% withSpinner(color="#0dc5c1")),
-                                        tabPanel("scRNA-Seq", plotOutput("scrnaplot") %>% withSpinner(color="#0dc5c1")),
-                                        tabPanel("Peak to Gene linkages", plotOutput("peakgenelinks") %>% withSpinner(color="#0dc5c1"))
-                                      ))),
+                                    tabsetPanel(
+                                      tabPanel("scATAC-Seq", plotOutput("atacplot")),
+                                      tabPanel("scRNA-Seq", plotOutput("scrnaplot")),
+                                      tabPanel("Refined Clusters", plotOutput("refined_clust")),
+                                      tabPanel("Peak to Gene linkages", plotOutput("peakgenelinks"))
+                                    ))),
                            tabPanel("About", span(htmlOutput("about"), style="font-size: 25px;")),
                            tabPanel("GitHub", span(htmlOutput("github"), style="font-size: 25px;"))
                            
@@ -234,16 +234,16 @@ server <- function(input, output) {
       
       
       ##Integration
+      output$scrnaplot<-renderPlot({
+        DimPlot(object = pbmc_rna, group.by = 'celltype',
+                label = TRUE,
+                repel = TRUE) + NoLegend() + ggtitle('scRNA-seq')
+      })
       output$refined_clust<-renderPlot({
         DimPlot(object = pbmc, group.by = 'predicted.id',
                 label = TRUE,
                 repel = TRUE) + NoLegend() + ggtitle('scATAC-seq')
       })
-      output$scrnaplot<-renderPlot({
-        DimPlot(object = pbmc_rna, group.by = 'celltype',
-                label = TRUE,
-                repel = TRUE) + NoLegend() + ggtitle('scRNA-seq')
-      }) 
       output$peakgenelinks<-renderPlot({
         CoveragePlot(
           object = pbmc,

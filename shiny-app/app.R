@@ -254,7 +254,8 @@ server <- function(input, output) {
       })
     }
   })
-  
+
+  saveRDS(object = pbmc, file = "pbmc_atac_integrated.rds")
   
 }
 

@@ -56,7 +56,7 @@ ui <- fluidPage(theme=shinytheme("yeti"),
 ######Server
 server <- function(input, output) {
   #To upload user datasets
-  options(shiny.maxRequestSize=10000*1024^2)
+  options(shiny.maxRequestSize=5000*1024^2)
   
 
   

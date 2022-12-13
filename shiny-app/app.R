@@ -43,7 +43,8 @@ ui <- fluidPage(theme=shinytheme("yeti"),
                                       tabPanel("scATAC-Seq", plotOutput("atacplot")),
                                       tabPanel("scRNA-Seq", plotOutput("scrnaplot")),
                                       tabPanel("Refined Clusters", plotOutput("refined_clust")),
-                                      tabPanel("Peak to Gene linkages", plotOutput("peakgenelinks"))
+                                      tabPanel("Peak to Gene linkages", plotOutput("peakgenelinks")),
+                                      uiOutput("downloadrds", style = 'padding: 20px')
                                     ))),
                            tabPanel("About", span(htmlOutput("about"), style="font-size: 25px;")),
                            tabPanel("GitHub", span(htmlOutput("github"), style="font-size: 25px;"))
@@ -192,6 +193,11 @@ server <- function(input, output) {
         query = pbmc,
         reduction = 'cca'
       )
+      output$scrnaplot<-renderPlot({
+        DimPlot(object = pbmc_rna, group.by = 'celltype',
+                label = TRUE,
+                repel = TRUE) + NoLegend() + ggtitle('scRNA-seq')
+      })
       #DimPlot(object = pbmc, label = TRUE) + NoLegend()
       predicted.labels <- TransferData(
         anchorset = transfer.anchors,
@@ -220,7 +226,11 @@ server <- function(input, output) {
         '13' = 'pDC'
       )
       pbmc <- AddMetaData(object = pbmc, metadata = predicted.labels)
-      
+            output$refined_clust<-renderPlot({
+        DimPlot(object = pbmc, group.by = 'predicted.id',
+                label = TRUE,
+                repel = TRUE) + NoLegend() + ggtitle('scATAC-seq')
+      })
       #Differential peak analysis
       DefaultAssay(pbmc) <- 'peaks'
       da_peaks <- FindMarkers(
@@ -231,19 +241,9 @@ server <- function(input, output) {
         latent.vars = 'peak_region_fragments'
       )
       print(head(da_peaks))
-      
-      
-      ##Integration
-      output$scrnaplot<-renderPlot({
-        DimPlot(object = pbmc_rna, group.by = 'celltype',
-                label = TRUE,
-                repel = TRUE) + NoLegend() + ggtitle('scRNA-seq')
-      })
-      output$refined_clust<-renderPlot({
-        DimPlot(object = pbmc, group.by = 'predicted.id',
-                label = TRUE,
-                repel = TRUE) + NoLegend() + ggtitle('scATAC-seq')
-      })
+     
+
+
       output$peakgenelinks<-renderPlot({
         CoveragePlot(
           object = pbmc,
@@ -252,10 +252,24 @@ server <- function(input, output) {
           extend.downstream = 20000
         )
       })
+      
+      output$downloadrds<-renderUI({
+      if(!is.null(predicted.labels))
+      {
+        downloadButton('downloadrdsfile', 'Download Results')
+      }
+    })
+      
+    output$downloadrdsfile <- downloadHandler(
+        filename = "scARIA_Integrated_scATAC.rds",
+        content = function(file) {
+        saveRDS(object = pbmc, file = "pbmc_atac_integrated.rds")
+        }
+      )
     }
   })
 
-  saveRDS(object = pbmc, file = "pbmc_atac_integrated.rds")
+  
   
 }
 

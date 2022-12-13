@@ -17,12 +17,6 @@ library(ggplot2)
 library(patchwork)
 library(BSgenome.Hsapiens.UCSC.hg38)
 
-atacdata_table<-as.data.frame(queryATAC(metadata_only=TRUE))
-accession_atac<-as.vector(unique(atacdata_table$Accession))
-atacdata_table<-dplyr::select(atacdata_table, Reference, Accession, Sequencing_Name, Organism, Disease, Tissue_Cell_Type, Data_Summary)
-scrna_table<-as.data.frame(listDatasets())
-scrna_table<-dplyr::select(scrna_table, Reference, Taxonomy, Part)
-accession_scrna<-as.vector(unique(scrna_table$Reference))
 
 ######UI
 ui <- fluidPage(theme=shinytheme("yeti"),
@@ -76,22 +70,7 @@ server <- function(input, output) {
   #To upload user datasets
   options(shiny.maxRequestSize=3000*1024^2)
   
-  #To show public scATAC-Seq datasets
-  observeEvent(input$atac_public, {
-    output$mytable = DT::renderDataTable({
-      unique(atacdata_table) 
-    }, options = list(scrollX = TRUE, scrollY = TRUE), 
-    caption=htmltools::tags$caption("scATAC-Seq Datasets", style="color:black; font-size: 20px; font-weight:bold"))
-  })
-  
-  
-  #To show public scRNA-Seq datasets
-  observeEvent(input$scrna_public, {
-    output$mytable = DT::renderDataTable({
-      unique(scrna_table)
-    }, options = list(scrollX = TRUE, scrollY = TRUE),
-    caption=htmltools::tags$caption("scRNA-Seq Datasets", style="color:black; font-size: 20px; font-weight:bold"))
-  })
+
   
   ##About Section
   output$about<- renderUI({

@@ -38,7 +38,7 @@ ui <- fluidPage(theme=shinytheme("yeti"),
                                         textInput("useremail", "Input email address")
                                         actionButton('integrateupload_btn', 'Analyze and Integrate',
                                                      style="color: #fff; background-color: #4CAF50; text-align: center"),
-                                        h6(HTML("*=required"), style={'text-align: center; font-weight: bold; color: red;'}),
+                                        h6(HTML("*=required"), style={'text-align: center; font-weight: bold; color: red;'})
                                       ),
                                     tabsetPanel(
                                       tabPanel("scATAC-Seq", plotOutput("atacplot")),
